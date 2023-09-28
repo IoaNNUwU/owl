@@ -1,5 +1,7 @@
 # O v O (Owl-lang)
-My thoughts on ideal programming language
+My thoughts on ideal programming language that someday I'll write.
+
+- Inspired by `Rust`, `Kotlin`
 
 ## Types
 ### Primitives
