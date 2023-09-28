@@ -1,0 +1,16 @@
+
+// struct uses '\n' as delimiter
+
+struct User {
+    name: String
+    age: i32
+}
+
+// or ',' on single line
+struct User { name: String, age: i32 }
+
+// private
+_ struct User {
+
+}
+
