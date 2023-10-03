@@ -270,6 +270,93 @@ Everything is visible to users of the library by default.
 - `vis(file)`. Only visible in file, where structure defined.
 - `vis(mod)`. Only visible in module, where structure defined.
 
+### for/while loop
+
+for/while loops create a lot of indentation.
+
+There are posibilities:
+1. Everything after `loop-variable` declarations is placed inside the loop (Break using `break 'label` syntax)
+2. Only things that use `loop-variable` are placed inside the loop (This is stupid because you can mix `loop` & `non-loop` things but may be cool)
+3. Loop ends with last usage of `loop-variable` (This is stupid because there is no visible difference between loop and non-loop)
+4. Indentations are lowered using `fn name() = for {}` syntax.
+```rust
+// 1
+fn add_connect_and_disconnect_message_to_queue_on_server_event(
+    mut server_events: EventReader<ServerEvent>,
+    mut c2s_queue: ResMut<IncomingC2SPacketsQueue>,
+) {
+    let event = 'label for server_events.iter();
+    match event {
+        ServerEvent::ClientConnected { client_id } => {
+            let message = Client2ServerMessage {
+                client_id: *client_id,
+                packet: Client2ServerPacket::Ping,
+            };
+            c2s_queue.0.push(message);
+        }
+        ServerEvent::ClientDisconnected { client_id, reason } => {
+            let message = Client2ServerMessage {
+                client_id: *client_id,
+                packet: Client2ServerPacket::Disconnect(C2SDisconnect {
+                    reason: reason.to_string(),
+                }),
+            };
+            c2s_queue.0.push(message);
+        }
+    }
+    break 'label
+    println("Loop ends");
+}
+// 4
+fn add_connect_and_disconnect_message_to_queue_on_server_event(
+    mut server_events: EventReader<ServerEvent>,
+    mut c2s_queue: ResMut<IncomingC2SPacketsQueue>,
+)
+= for event in server_events.iter {
+    match event {
+        ServerEvent::ClientConnected { client_id } => {
+            let message = Client2ServerMessage {
+                client_id: *client_id,
+                packet: Client2ServerPacket::Ping,
+            };
+            c2s_queue.0.push(message);
+        }
+        ServerEvent::ClientDisconnected { client_id, reason } => {
+            let message = Client2ServerMessage {
+                client_id: *client_id,
+                packet: Client2ServerPacket::Disconnect(C2SDisconnect {
+                    reason: reason.to_string(),
+                }),
+            };
+            c2s_queue.0.push(message);
+        }
+    }
+}
+// no way to print something after loop ends
+// 4+
+fn add_connect_and_disconnect_message_to_queue_on_server_event(
+    mut server_events: EventReader<ServerEvent>,
+    mut c2s_queue: ResMut<IncomingC2SPacketsQueue>,
+)
+= for event in server_events.iter match event {
+    ServerEvent::ClientConnected { client_id } => {
+        let message = Client2ServerMessage {
+            client_id: *client_id,
+            packet: Client2ServerPacket::Ping,
+        };
+        c2s_queue.0.push(message);
+    }
+    ServerEvent::ClientDisconnected { client_id, reason } => {
+        let message = Client2ServerMessage {
+            client_id: *client_id,
+            packet: Client2ServerPacket::Disconnect(C2SDisconnect {
+                reason: reason.to_string(),
+            }),
+        };
+        c2s_queue.0.push(message);
+    }
+}
+```
 
 ### Uses `.ovo` extension:
 `main.ovo` (Looks like owl !)
