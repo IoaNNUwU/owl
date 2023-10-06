@@ -164,10 +164,9 @@ fun main() {
     println(n)
     println(a)
 }
-// Preferred way to write single line functions
-fun add ( a: i32  b: i32 ) -> i32 {
-    a + b
-}
+
+fun add ( a: i32  b: i32 ) -> i32 = a + b
+
 ```
 Some readability tricks
 ```kotlin
@@ -218,8 +217,8 @@ fun compare_users ( user1: User  user2: User ) -> Ordering {
 
 fun main() {
     compare_users( User { name: "User1" }  User { name: "User2" })
-    compare_users( 
-        User { name: "User1" }  
+    compare_users(
+        User { name: "User1" }
         User { name: "User2" }
     )
 
@@ -227,6 +226,35 @@ fun main() {
     val user2 = User { name: "User2" }
 
     compare_users( user1  user2 )
+}
+```
+#### Inside operators
+- Boolean NOT (`!`) should be placed right before function call
+```Rust
+let authorized = true
+if !cond {
+    println!("No access")
+    return
+}
+
+let user = User::default()
+if user.is_authorized() {
+    println("Welcome")
+}
+// Note: ! before boolean function acts as NOT
+if user.!is_admin() {
+    println("Maintanence! Try next time")
+    return
+}
+```
+- Reference op (`&`) should be placed before the thing
+```Rust
+let user = User::default();
+let name = user.&name;
+// Same with dereference
+if user.*password == 1234567 {
+    println("Too easy password")
+    return
 }
 ```
 
@@ -279,6 +307,7 @@ There are posibilities:
 2. Only things that use `loop-variable` are placed inside the loop (This is stupid because you can mix `loop` & `non-loop` things but may be cool)
 3. Loop ends with last usage of `loop-variable` (This is stupid because there is no visible difference between loop and non-loop)
 4. Indentations are lowered using `fn name() = for {}` syntax.
+5. Use various indentations for different things. For `match` it can be 2 spaces
 ```rust
 // 1
 fn add_connect_and_disconnect_message_to_queue_on_server_event(
@@ -356,6 +385,132 @@ fn add_connect_and_disconnect_message_to_queue_on_server_event(
         c2s_queue.0.push(message);
     }
 }
+// 5
+fn add_connect_and_disconnect_message_to_queue_on_server_event(
+    mut server_events: EventReader<ServerEvent>,
+    mut c2s_queue: ResMut<IncomingC2SPacketsQueue>,
+) {
+    for event in server_events.iter() {
+        match event {
+          ServerEvent::ClientConnected { client_id } => {
+                let message = Client2ServerMessage {
+                    client_id: *client_id,
+                    packet: Client2ServerPacket::Ping,
+                };
+                c2s_queue.0.push(message);
+            }
+          ServerEvent::ClientDisconnected { client_id, reason } => {
+            let message = Client2ServerMessage {
+                client_id: *client_id,
+                packet: Client2ServerPacket::Disconnect(C2SDisconnect {
+                    reason: reason.to_string(),
+                }),
+            };
+            c2s_queue.0.push(message);
+            }
+        }
+    }
+    println("Loop ends");
+}
+// Connect unconnectable (Stupid because it is hard to see match)
+fn add_connect_and_disconnect_message_to_queue_on_server_event(
+    mut server_events: EventReader<ServerEvent>,
+    mut c2s_queue: ResMut<IncomingC2SPacketsQueue>,
+) {
+    for match event in server_events.iter() {
+        ServerEvent::ClientConnected { client_id } => {
+            let message = Client2ServerMessage {
+                client_id: *client_id,
+                packet: Client2ServerPacket::Ping,
+            };
+            c2s_queue.0.push(message);
+        }
+        ServerEvent::ClientDisconnected { client_id, reason } => {
+            let message = Client2ServerMessage {
+                client_id: *client_id,
+                packet: Client2ServerPacket::Disconnect(C2SDisconnect {
+                    reason: reason.to_string(),
+                }),
+            };
+            c2s_queue.0.push(message);
+        }
+    }
+    println("Loop ends");
+}
+// Functional
+fn add_connect_and_disconnect_message_to_queue_on_server_event(
+    mut server_events: EventReader<ServerEvent>,
+    mut c2s_queue: ResMut<IncomingC2SPacketsQueue>,
+) {
+    server_events.iter().map(|event| => { match event {
+        ServerEvent::ClientConnected { client_id } => Client2ServerMessage::new(*client_id, Client2ServerPacket::Ping)
+        ServerEvent::ClientDisconnected { client_id, reason } =>
+            Client2ServerMessage::new(*client_id, Client2ServerPacket::Disconnect(C2SDisconnect::new(reason.to_string()))),
+    }})
+    .for_each(|message| c2s_queue.0.push(message));
+}
+// Special map operator
+fn add_connect_and_disconnect_message_to_queue_on_server_event(
+    mut server_events: EventReader<ServerEvent>,
+    mut c2s_queue: ResMut<IncomingC2SPacketsQueue>,
+)
+  = server_events
+    |> |event| => match event {
+    |       ServerEvent::ClientConnected { client_id } => Client2ServerMessage::new(*client_id, Client2ServerPacket::Ping)
+    |       ServerEvent::ClientDisconnected { client_id, reason } => {
+    |           Client2ServerMessage::new(*client_id, Client2ServerPacket::Disconnect(C2SDisconnect::new(reason.to_string()))),
+    |       }
+    |   }
+    *> |message| c2s_queue.0.push(message)
+}
+```
+
+### Functional
+- `|>` 
+- `*` immideately executes operations. If there is final function (Like `count()`) it should be placed right after.
+- `**` immideately executes `.collect()` with specified buffer
+```Rust
+let mut strings: Vec<String> = vec!["BigLong String", "hel lo", "worl d"]
+    .into_iter()
+    .map(String::from)
+    .collect();
+
+// Rust
+let size = strings.iter_mut()
+    .filter(|s| s.len() > 3)
+    .filter(|s| s.len() < 8)
+    .filter(|s| !s.is_empty())
+    .map(|s| s.replace(' ', "@"))
+    .map(|s| s.chars()
+        .rev()
+        .filter(|_| rand::gen_bool(0.9))
+        .collect::<Vec<_>>())
+    .count();
+
+// Functional
+let size = strings.iter_mut()
+    |#  len() > 3
+    |#  len() < 8
+    |#  !is_empty()
+    |>  replace(' ', "@")
+    |>  chars()
+    |   |>  rev()
+    |   |#  rand::gen_bool(0.9)
+    |   .collect()
+    |
+    .count()
+
+// Functional 2
+let size = strings.iter_mut()
+            |#  len() is in 3..8
+            .   Vec<_>// Execute action immediately and store result in vec
+            |#  !is_empty())
+            .count()
+
+let size = strings.iter_mut()
+    |#  s -> "Hello World".len() is in s.len()..8
+    .count()
+
 ```
 
 ### Uses `.ovo` extension:
