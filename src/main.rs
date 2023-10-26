@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 fn main() {
     let mut strings: Vec<String> = vec![
         "BigLong String",
