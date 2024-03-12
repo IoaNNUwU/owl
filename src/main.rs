@@ -1,38 +1,42 @@
-#[cfg(test)]
-mod tests;
+use owl::*;
 
 fn main() {
-    let mut strings: Vec<String> = vec![
-        "BigLong String",
-        "hel lo",
-        "worl d",
-        "123 ",
-        "2",
-        "Str",
-        "Whois",
-        "  a     ",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect();
+    let am = SimpleArc::new(SimpleMutex::new(String::from("Hello world!")));
 
-    let vec: Vec<_> = strings
-        .iter_mut()
-        .filter(|s| s.len() > 3)
-        .filter(|s| s.len() < 8)
-        .filter(|s| !s.is_empty())
-        .map(|s| s.replace(' ', "@"))
-        .map(|s| {
-            s.chars()
-                .rev()
-                .filter(|_| rand::gen_bool(0.9))
-                .collect::<Vec<_>>()
-        })
-        .collect();
+    let mut handles = vec![];
+
+    for i in 0..10 {
+        let mut arc_mutex = SimpleArc::clone(&am);
+        let handle = std::thread::spawn(move || arc_mutex.with_mut_value(|text| text.push_str(&format!("{}", i))));
+
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("sm: {}", am);
 }
 
-mod rand {
-    pub fn gen_bool(chance_true: f32) -> bool {
-        true
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test1() {
+        let am = SimpleMutex::new(1);
+        
+        let static_mutex_ref = Mut::new(Box::leak(Box::new(am)));
+
+        let mutable_ref1 = static_mutex_ref.clone();
+        let mutable_ref2 = static_mutex_ref.clone();
+
+        println!("1: {}", mutable_ref1);
+        println!("2: {}", mutable_ref2);
+        println!("0: {}", static_mutex_ref);
+
+        // We should be able to safely have multiple mutable references to SimpleMutex.
+
     }
 }
