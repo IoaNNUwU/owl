@@ -1,5 +1,24 @@
 
-# Отсутствие внутренних паник - везде результат.
+### Отсутствие внутренних паник - везде результат.
+
+Даже для самых простых операций используется результат - это делается для избежания паник
+
+Those are equivalent 
+```rust
+fn sum(a: i32, b: i32) -> Result<i32, IntegerOverflow> {
+    return a + b // a + b can fail with IntegerOverflow
+}
+
+#[sneaky(result(IntegerOverflow))]
+fn sum(a: i32, b: i32) -> Result<i32, ^> {
+    return a + b
+}
+
+#[sneaky(easy(result(IntegerOverflow)))]
+fn sum(a: i32, b: i32) -> i32 {
+    return a + b
+}
+```
 
 ```rust
 use std::*
@@ -35,13 +54,14 @@ fn handle_tcp() -> Result<(), ^> {
 }
 ```
 
+Those are equivalent 
 ```rust
-# unsafe_never(IntegerOverflow)
-fn func() -> i32 {
-    return 5 + 3
+fn sum(a: i32, b: i32) -> Result<i32, IntegerOverflow> {
+    return a + b
 }
 
-fn func() -> Result<i32, IntegerOverflow> {
-    return 5 + 3
+#[sneaky(result(IntegerOverflow))]
+fn sum(a: i32, b: i32) -> i32 {
+    return a + b
 }
 ```
